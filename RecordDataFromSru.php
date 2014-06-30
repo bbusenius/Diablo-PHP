@@ -255,10 +255,11 @@ class RecordDataFromSru extends QueryParsing
         $xmlObject = simplexml_load_string($sruXml);
 //print_r($xmlObject->xpath('//holdings'));
 
-        /*Get the volume number by counting where we are in relation to itemId
-        in a different part of the array*/
+        /*Get the volume numbers and call#  prefixes for counting where 
+        we are in relation to itemId in a different part of the array*/
         $circulations = $xmlObject->xpath('//circulation');
         $volumes = $xmlObject->xpath('//volume');
+        $prefixes = $xmlObject->xpath('//shelvingData');
 
         /*Only process holdings/circulation data if it exists*/
         if (!empty($circulations)) {
@@ -266,11 +267,12 @@ class RecordDataFromSru extends QueryParsing
             foreach($circulations as $circulation){
                 $itemId = $circulation->itemId;
                 if($itemId == $this->getBarcode()){
-                    $volumeNumberKey = $i; 
+                    $itemKey = $i; 
                 }
                 $i++;
             }
-            $volumeNumber = (string) $volumes[$volumeNumberKey]->enumeration;
+            $volumeNumber = (string) $volumes[$itemKey]->enumeration;
+            $prefix = (string) $prefixes[$itemKey];
 
             /*Get the part of the XML that contains holdings and circulation data related to the 
             requested copy (based on barcode)*/ 
@@ -285,6 +287,7 @@ class RecordDataFromSru extends QueryParsing
             $circData['callNumber'] = $xmlObject->xpath('//circulation[itemId = "' . $this->getBarcode() . '"]/ancestor::holding/callNumber');
             $circData['copyNumber'] = $xmlObject->xpath('//circulation[itemId = "' . $this->getBarcode() . '"]/ancestor::holding/copyNumber');
             $circData['volumeNumber'] = $volumeNumber;
+            $circData['callNumberPrefix'] = $prefix;
           
             //print_r(array_merge($bibData, $circData));
             $data = (object) array_merge((array) $bibData, $circData, array('issn' => $issns), array('isbn' => $isbns));
@@ -314,6 +317,7 @@ class RecordDataFromSru extends QueryParsing
         $data['title'] = $this->getTitle($recordData->titleInfo);
         $data['location'] =  (isset($recordData->shelvingLocation) ? $recordData->shelvingLocation : null); 
         $data['callNumber'] = (isset($recordData->callNumber) ? implode($recordData->callNumber) : null);
+        $data['callNumberPrefix'] = (isset($recordData->callNumberPrefix) ? $recordData->callNumberPrefix : null); 
         $data['copyNumber'] = (isset($recordData->copyNumber) ? implode($recordData->copyNumber) : null);
         $data['volumeNumber'] = (isset($recordData->volumeNumber) ? $recordData->volumeNumber : null);
         $data['author'] = (isset($recordData->name->namePart) ? (string) $recordData->name->namePart: null);
