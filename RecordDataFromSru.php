@@ -272,7 +272,7 @@ class RecordDataFromSru extends QueryParsing
                 $i++;
             }
             $volumeNumber = (string) $volumes[$itemKey]->enumeration;
-            $prefix = (string) $prefixes[$itemKey];
+            $prefix = (!empty($prefixes) ? (string) $prefixes[$itemKey] : '') ;
 
             /*Get the part of the XML that contains holdings and circulation data related to the 
             requested copy (based on barcode)*/ 
