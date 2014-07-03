@@ -52,15 +52,22 @@ class QueryParsing
      * Can be used to pass arguments to curl.
      *
      * @param associative array of query parameters as key value pairs
+     * @param $bflag, optional boolean for setting the first query 
+     * parameter with a ?
      *
      * @return a string of query parameters to pass to curl
      */
-    public function arrayToPost($array) {
+    public function arrayToPost($array, $bflag=true) {
         $post = '';
         $i = 0;
         foreach ($array as $parameter => $value) {
             if ($i == 0) {
-                $post .= '?' . $parameter . '=' . $value;
+                if ($bflag) {
+                    $post .= '?' . $parameter . '=' . $value;
+                }
+                else {
+                    $post .= $parameter . '=' . $value;
+                }
             }
             else {
                 $post .= '&' . $parameter . '=' . $value;
