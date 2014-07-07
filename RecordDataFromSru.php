@@ -61,7 +61,8 @@ class RecordDataFromSru extends QueryParsing
      * @return a string, the xsl stylesheet on disk
      */
     public function getXsl(){
-        return file_get_contents('marc2mods.xsl');
+        $base = realpath($_SERVER["DOCUMENT_ROOT"]);
+        return file_get_contents($base . '/lib/searchform/marc2mods.xsl');
     }
  
     /**
