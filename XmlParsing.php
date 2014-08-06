@@ -38,7 +38,12 @@ class XmlParsing
                     $xml->addChild("value", $value)->addAttribute('key', $key);
                 }
                 else {
-                    $xml->addChild("$key",$value);
+                    /* Fixes a problem where the second " is being improperly
+                    encoded as $quot without a semicolon. How or why this is 
+                    happening to the data is still unknown.*/
+                    $value = htmlspecialchars($value, ENT_SUBSTITUTE);
+
+                    $xml->addChild("$key", $value);
                 }
             }
         }
