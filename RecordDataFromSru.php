@@ -29,10 +29,10 @@ class RecordDataFromSru extends QueryParsing
     protected function getDatabase() {
         $data = $this->getQueryParameters(); 
         if (isset($data['database']) and $data['database'] == 'testing') {
-            $sruAPI = 'http://raspberry.lib.uchicago.edu:8080/oledocstore/sru';
+            $sruAPI = 'http://oleapptest.uchicago.edu:8080/oledocstore/sru';
         }
         else {
-            $sruAPI = 'http://blackberry.lib.uchicago.edu:8080/oledocstore/sru';
+            $sruAPI = 'http://ole.uchicago.edu:8080/oledocstore/sru';
         }
         return $sruAPI;
     }
@@ -217,7 +217,27 @@ class RecordDataFromSru extends QueryParsing
         else {
             $titleInfoArray = $filter->getFirstRepeatedData($titleInfo, $titleInfoArray);
         }
+
         return implode(' ', $titleInfoArray);
+    }
+
+
+    /**
+     * Method gets author information from a SimpleXMLElement.
+     *
+     * @param $authorInfo, one SimpleXMLElement or an array
+     * of SimpleXMLElements.
+     *
+     * @return string, the author. If more than one author exists
+     * return the first one (which should be the primary author).
+     */
+    protected function getAuthor($authorInfo) {
+        if (!is_array($authorInfo)) {
+            return implode(' ', (array)$authorInfo->namePart);
+        }
+        else {
+            return $this->getAuthor(array_shift($authorInfo));
+        }
     }
  
     /**
@@ -232,7 +252,7 @@ class RecordDataFromSru extends QueryParsing
         /*Call the SRU once*/
         $sruXml = $this->getRecordXml();
 
-       /*Nasty bugfix: for some reason raspberry returns marcxml without the collection element (not the case on blackberry).
+        /*Nasty bugfix: for some reason raspberry returns marcxml without the collection element (not the case on blackberry).
         This causes the marcxml to mods xslt to fail for some unknown reason (though after looking at the schema it appears the
         collection element might be mandatory). Anyways, we rewrite the xml string to always have a collection element here. */ 
         if (!preg_match('/<collection/', $sruXml)) {
@@ -256,7 +276,7 @@ class RecordDataFromSru extends QueryParsing
         $xmlObject = simplexml_load_string($sruXml);
 //print_r($xmlObject->xpath('//holdings'));
 
-        /*Get the volume numbers and call#  prefixes for counting where 
+        /*Get the volume numbers and call# prefixes for counting where 
         we are in relation to itemId in a different part of the array*/
         $circulations = $xmlObject->xpath('//circulation');
         $volumes = $xmlObject->xpath('//volume');
@@ -273,8 +293,8 @@ class RecordDataFromSru extends QueryParsing
                 $i++;
             }
             $volumeNumber = (string) $volumes[$itemKey]->enumeration;
-            $prefix = (!empty($prefixes) ? (string) $prefixes[$itemKey] : '') ;
-
+            $prefix = (!empty($prefixes) && isset($prefixes[$itemKey]) ? (string) $prefixes[$itemKey] : '') ;
+    
             /*Get the part of the XML that contains holdings and circulation data related to the 
             requested copy (based on barcode)*/ 
             $circData = array();
@@ -313,15 +333,19 @@ class RecordDataFromSru extends QueryParsing
         /*Get all record data from the SRU*/
         $recordData = $this->getRecordData();
 
+        /*Convenience variables*/
+        $author = isset($recordData->name) ? $this->getAuthor($recordData->name) : '';
+
         /*Populate an array with the data we want*/
         $data = array();
         $data['title'] = $this->getTitle($recordData->titleInfo);
         $data['location'] =  (isset($recordData->shelvingLocation) ? $recordData->shelvingLocation : null); 
+        $data['internalLocation'] =  (isset($recordData->localLocation) ? $recordData->localLocation : null); 
         $data['callNumber'] = (isset($recordData->callNumber) ? implode($recordData->callNumber) : null);
         $data['callNumberPrefix'] = (isset($recordData->callNumberPrefix) ? $recordData->callNumberPrefix : null); 
         $data['copyNumber'] = (isset($recordData->copyNumber) ? implode($recordData->copyNumber) : null);
         $data['volumeNumber'] = (isset($recordData->volumeNumber) ? $recordData->volumeNumber : null);
-        $data['author'] = (isset($recordData->name->namePart) ? (string) $recordData->name->namePart: null);
+        $data['author'] = (!empty($author) ? $author: null);
         $data['bibId'] = $this->getId();
         $data['barcode'] = $this->getBarcode();
         $data['publisher'] = (isset($recordData->originInfo->publisher) ? $recordData->originInfo->publisher->__toString() : null);
