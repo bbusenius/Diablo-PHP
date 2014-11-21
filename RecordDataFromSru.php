@@ -335,11 +335,15 @@ class RecordDataFromSru extends QueryParsing
 
         /*Convenience variables*/
         $author = isset($recordData->name) ? $this->getAuthor($recordData->name) : '';
+        $temporayLocation = (isset($recordData->circulation[0]->temporaryLocation) ? $recordData->circulation[0]->temporaryLocation->__toString() : null);
+        $isTempLocation = isset($temporayLocation) and $temporayLocation != '/';  
+        $shelvingLocation = (isset($recordData->shelvingLocation) ? $recordData->shelvingLocation : null);
+        $location = ($isTempLocation ? substr($temporayLocation, 0, strpos($temporayLocation, '/')) : $shelvingLocation);
 
         /*Populate an array with the data we want*/
         $data = array();
         $data['title'] = $this->getTitle($recordData->titleInfo);
-        $data['location'] =  (isset($recordData->shelvingLocation) ? $recordData->shelvingLocation : null); 
+        $data['location'] =  (isset($location) ? $location : null); 
         $data['internalLocation'] =  (isset($recordData->localLocation) ? $recordData->localLocation : null); 
         $data['callNumber'] = (isset($recordData->callNumber) ? implode($recordData->callNumber) : null);
         $data['callNumberPrefix'] = (isset($recordData->callNumberPrefix) ? $recordData->callNumberPrefix : null); 
