@@ -32,7 +32,9 @@ class RecordDataFromSru extends QueryParsing
             $sruAPI = 'http://oleapptest.uchicago.edu:8080/oledocstore/sru';
         }
         else {
-            $sruAPI = 'http://ole.uchicago.edu:8080/oledocstore/sru';
+            //$sruAPI = 'http://ole.uchicago.edu:8080/oledocstore/sru';
+            //Debugging with Tod, 12/22, jej
+            $sruAPI = 'http://ole.uchicago.edu/sru';
         }
         return $sruAPI;
     }
@@ -126,17 +128,20 @@ class RecordDataFromSru extends QueryParsing
      */ 
     public function getRecordXml(){ 
         $ch = curl_init();
-        //error_log($this->getDatabase() . $this->arrayToPost($this->curlQueryParams()));
+        $url = $this->getDatabase() .  $this->arrayToPost($this->curlQueryParams());
+        //error_log($url);
         $curlConfig = array(
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_URL            => $this->getDatabase() . $this->arrayToPost($this->curlQueryParams()), //GET is faster than POST
+            CURLOPT_URL            => $url,
             CURLOPT_FOLLOWLOCATION =>  true
             //CURLOPT_URL            => $this->getDatabase(),
             //CURLOPT_POST           => true,
             //CURLOPT_POSTFIELDS     => $this->arrayToPost($this->curlQueryParams()),
         );
         curl_setopt_array($ch, $curlConfig);
-        $result = curl_exec($ch);
+        if (!$result = curl_exec($ch)) {
+            die('Unable to connect to ' . $url);
+        }
         curl_close($ch);
         return $result;
     } 
@@ -329,21 +334,20 @@ class RecordDataFromSru extends QueryParsing
      * php array, json, or xml (defaults to php).
      */
     public function getData() { 
-
         /*Get all record data from the SRU*/
         $recordData = $this->getRecordData();
 
         /*Convenience variables*/
         $author = isset($recordData->name) ? $this->getAuthor($recordData->name) : '';
-        $temporayLocation = (isset($recordData->circulation[0]->temporaryLocation) ? $recordData->circulation[0]->temporaryLocation->__toString() : null);
-        $isTempLocation = isset($temporayLocation) and $temporayLocation != '/';  
-        $shelvingLocation = (isset($recordData->shelvingLocation) ? $recordData->shelvingLocation : null);
-        $location = ($isTempLocation ? substr($temporayLocation, 0, strpos($temporayLocation, '/')) : $shelvingLocation);
+        $temporaryLocation = (!empty($recordData->circulation[0]->temporaryLocation) ? $recordData->circulation[0]->temporaryLocation->__toString() : null);
+        $isTempLocation = !empty($temporaryLocation) && $temporaryLocation != '/';  
+        $shelvingLocation = (!empty($recordData->shelvingLocation) ? $recordData->shelvingLocation : null);
+        $location = ($isTempLocation != false ? substr($temporaryLocation, 0, strpos($temporaryLocation, '/')) : $shelvingLocation);
 
         /*Populate an array with the data we want*/
         $data = array();
         $data['title'] = $this->getTitle($recordData->titleInfo);
-        $data['location'] =  (isset($location) ? $location : null); 
+        $data['location'] =  (!empty($location) ? $location : null); 
         $data['internalLocation'] =  (isset($recordData->localLocation) ? $recordData->localLocation : null); 
         $data['callNumber'] = (isset($recordData->callNumber) ? implode($recordData->callNumber) : null);
         $data['callNumberPrefix'] = (isset($recordData->callNumberPrefix) ? $recordData->callNumberPrefix : null); 
