@@ -142,7 +142,11 @@ class RecordDataFromSru extends QueryParsing
         if (!$result = curl_exec($ch)) {
             die('Unable to connect to ' . $url);
         }
+        $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
+        if ($httpcode != 200) {
+            throw new Exception('SRU data unavailable.');
+        }
         return $result;
     } 
 
