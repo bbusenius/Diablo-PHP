@@ -140,12 +140,12 @@ class RecordDataFromSru extends QueryParsing
         );
         curl_setopt_array($ch, $curlConfig);
         if (!$result = curl_exec($ch)) {
-            die('Unable to connect to ' . $url);
+            throw new Exception('Unable to connect to ole.uchicago.edu.');
         }
         $httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
         if ($httpcode != 200) {
-            throw new Exception('SRU data unavailable.');
+            throw new Exception($httpcode . ', SRU data unavailable from ole.uchicago.edu.');
         }
         return $result;
     } 
@@ -380,6 +380,50 @@ class RecordDataFromSru extends QueryParsing
             $data = $xml->asXML();
         }
         return $data;
+    }
+
+
+    /**
+     * Method for creating a custom styled page for http error messages.  
+     *
+     * @param $config, array of configurations
+     *
+     * @return string html, a nicely formatted error page. 
+     */
+    public function getErrorPage($config) {
+        
+        $template = '<!DOCTYPE html>'
+        . '<html lang="en">'
+        . '<head>'
+        . '<meta name="viewport" content="width=device-width,initial-scale=1.0"/>'
+        . file_get_contents($config['file'], true)
+        . '<link href="' . $config['css'] . '" media="all" rel="stylesheet" type="text/css">'
+        . '</head>'
+        . '<body>'
+        . '<header>'
+        . '<img src="' . $config['logo']['img'] .'" alt="' . $config['logo']['alt'] .'"/></header>'
+        . '<div id="main">'
+        . '<div id="content">'
+        . '<h1>We\'re sorry</h1>'
+        . '<p>Due to a technical problem we\'re unable to route your request '
+        . 'directly to ' . $config['service'] . '. </p>';
+
+        if (!empty($config['links'])) {
+            $template .= '<ul>';
+            foreach ($config['links'] as $link) {
+                $template .= '<li><a href="' . $link['url'] . '">' . $link['text'] . '</a></li>';
+            }
+            $template .= '</ul>'; 
+        }
+
+        $template .= '<small>Caught exception: '
+        . $config['httpResponse'] . '</small>'
+        . '</div>'
+        . '</div>'
+        . '</body>'
+        . '</html>';
+
+        return $template;
     }
 
     /**
